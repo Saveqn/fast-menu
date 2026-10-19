@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true }, {
       headers: {
-        "Set-Cookie": setSessionCookieHeader(),
+        "Set-Cookie": await setSessionCookieHeader(),
       },
     })
   } catch (err: any) {

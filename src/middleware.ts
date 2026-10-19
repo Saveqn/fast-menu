@@ -5,7 +5,7 @@ import {
   validateSession,
 } from "@/lib/auth"
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Protege rotas de admin
@@ -19,7 +19,7 @@ export function middleware(req: NextRequest) {
     }
 
     const token = getTokenFromRequest(req.headers)
-    if (!token || !validateSession(token)) {
+    if (!token || !(await validateSession(token))) {
       const loginUrl = new URL("/admin/login", req.url)
       return NextResponse.redirect(loginUrl)
     }

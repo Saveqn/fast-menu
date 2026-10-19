@@ -3,15 +3,15 @@ import { requireAdminSession } from "@/lib/auth"
 import { saveMenu, listMenus, deleteMenu } from "@/lib/storage"
 import { validateMenu } from "@/lib/schema"
 
-export async function GET() {
-  const auth = requireAdminSession(new Headers())
+export async function GET(req: Request) {
+  const auth = await requireAdminSession(req.headers)
   if (auth) return auth
   const menus = await listMenus()
   return NextResponse.json(menus)
 }
 
 export async function POST(req: Request) {
-  const auth = requireAdminSession(req.headers)
+  const auth = await requireAdminSession(req.headers)
   if (auth) return auth
 
   try {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = requireAdminSession(req.headers)
+  const auth = await requireAdminSession(req.headers)
   if (auth) return auth
 
   const { searchParams } = new URL(req.url)

@@ -1,12 +1,16 @@
-import { sign, verify, type Secret } from "jsonwebtoken"
+import { SignJWT, jwtVerify } from "jose"
 import { NextResponse } from "next/server"
 
-const SESSION_SECRET: Secret =
-  (process.env.ADMIN_SESSION_SECRET as Secret) || "dev-secret-change-me"
+/**
+ * jose работает и в Node runtime, и в Edge runtime (middleware).
+ * jsonwebtoken в middleware не работает (не поддерживает Edge), поэтому используем jose везде.
+ */
+const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || "dev-secret-change-me"
+const SESSION_KEY = new TextEncoder().encode(SESSION_SECRET)
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH
 
 const COOKIE_NAME = "admin_session"
-const TOKEN_TTL_SECONDS = 60 * 60 * 8 // 8 horas
+const TOKEN_TTL_SECONDS = 60 * 60 * 8 // 8 часов
 const COOKIE_MAX_AGE = TOKEN_TTL_SECONDS
 
 export interface AdminSession {
@@ -33,14 +37,12 @@ export function makePasswordHash(password: string): string {
   return Buffer.from(password).toString("base64")
 }
 
-export function signAdminSession(): string {
-  const now = Math.floor(Date.now() / 1000)
-  const payload: AdminSession = {
-    admin: true,
-    iat: now,
-    exp: now + TOKEN_TTL_SECONDS,
-  }
-  return sign(payload, SESSION_SECRET)
+export async function signAdminSession(): Promise<string> {
+  return new SignJWT({ admin: true })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${TOKEN_TTL_SECONDS}s`)
+    .sign(SESSION_KEY)
 }
 
 export function getTokenFromRequest(headers: Headers): string | null {
@@ -52,26 +54,29 @@ export function getTokenFromRequest(headers: Headers): string | null {
   return match ? match[1] : null
 }
 
-export function validateSession(token: string): AdminSession | null {
+export async function validateSession(
+  token: string
+): Promise<AdminSession | null> {
   try {
-    return verify(token, SESSION_SECRET) as AdminSession
+    const { payload } = await jwtVerify(token, SESSION_KEY)
+    return payload as unknown as AdminSession
   } catch {
     return null
   }
 }
 
-export function requireAdminSession(
+export async function requireAdminSession(
   reqHeaders: Headers
-): NextResponse | null {
+): Promise<NextResponse | null> {
   const token = getTokenFromRequest(reqHeaders)
-  if (!token || !validateSession(token)) {
+  if (!token || !(await validateSession(token))) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
   return null
 }
 
-export function setSessionCookieHeader(): string {
-  const token = signAdminSession()
+export async function setSessionCookieHeader(): Promise<string> {
+  const token = await signAdminSession()
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
   return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`
 }

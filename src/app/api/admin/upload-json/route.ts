@@ -5,7 +5,7 @@ import { validateMenu } from "@/lib/schema"
 export const runtime = "nodejs"
 
 export async function POST(req: Request) {
-  const auth = requireAdminSession(req.headers)
+  const auth = await requireAdminSession(req.headers)
   if (auth) return auth
 
   try {

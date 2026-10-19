@@ -23,7 +23,7 @@ Site language: **European Portuguese (pt-PT)**.
 - React + Tailwind CSS
 - Google Gemini 1.5 Flash (AI to extract JSON from photos)
 - Vercel Blob (JSON file storage)
-- bcryptjs + JWT (encrypted admin session)
+- jose + JWT (signed admin session cookie, works in both Node and Edge/middleware runtimes)
 
 ## Environment variables
 
@@ -96,7 +96,7 @@ Closed days use `"closed": true` with `"reason": "feriado"` or `"ferias"`.
 
 ## Security: password hash in a public repository
 
-The file `scripts/hash-password.js` is **safe to keep in a public repository** because it contains no secrets — it is only a local helper to generate a bcrypt hash.
+The file `scripts/hash-password.js` is **safe to keep in a public repository** because it contains no secrets — it is only a local helper that base64-encodes the admin password.
 
 What must **never** be committed to GitHub:
 
@@ -104,6 +104,6 @@ What must **never** be committed to GitHub:
 - `.env.local` or any `.env.*.local` file
 - Any real API keys or session secrets
 
-The hash should exist only as a **Vercel Environment Variable** (and in your local `.env.local`). Even if an attacker obtained the hash, bcrypt (cost factor 10) is a slow, one-way hashing function designed to make brute-force attacks expensive, but the safest practice is to never expose it at all.
+The hash should exist only as a **Vercel Environment Variable** (and in your local `.env.local`). Base64 is encoding, not encryption, so anyone who obtains the hash can decode the password — treat it as a secret and never expose it.
 
 The AI prompt is fixed, written in English, and cannot be changed by the admin. The admin can only add an optional note, which is appended with a warning that it is secondary and the main prompt takes priority.
