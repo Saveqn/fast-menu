@@ -8,6 +8,7 @@ import type { SchoolMenu } from "@/types/menu"
 export default function AdminImportPage() {
   const [preview, setPreview] = useState<SchoolMenu | null>(null)
   const [step, setStep] = useState<"import" | "preview">("import")
+  const [saveError, setSaveError] = useState("")
 
   async function handleGenerate(file: File | Blob, adminNote: string) {
     const res = await fetch("/api/admin/ai/import", {
@@ -46,19 +47,22 @@ export default function AdminImportPage() {
     setStep("preview")
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!preview) return
+    setSaveError("")
     fetch("/api/admin/menus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(preview),
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.ok) {
         setStep("import")
         setPreview(null)
         window.location.href = "/"
       } else {
-        alert("Erro ao guardar menu")
+        // Mostra o erro real do servidor (zod, Blob, etc.)
+        const data = await res.json().catch(() => ({}))
+        setSaveError(data.error || `Erro ao guardar menu (${res.status})`)
       }
     })
   }
@@ -83,11 +87,21 @@ export default function AdminImportPage() {
             onUploadJson={handleUploadJson}
           />
         ) : (
-          <JsonPreview
-            menu={preview!}
-            onConfirm={handleConfirm}
-            onCancel={() => setStep("import")}
-          />
+          <>
+            {saveError && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 mb-6 whitespace-pre-wrap">
+                {saveError}
+              </div>
+            )}
+            <JsonPreview
+              menu={preview!}
+              onConfirm={handleConfirm}
+              onCancel={() => {
+                setSaveError("")
+                setStep("import")
+              }}
+            />
+          </>
         )}
       </div>
     </main>
