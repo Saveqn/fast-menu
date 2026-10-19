@@ -21,7 +21,7 @@ Site language: **European Portuguese (pt-PT)**.
 
 - Next.js 14 (App Router)
 - React + Tailwind CSS
-- Google Gemini 1.5 Flash (AI to extract JSON from photos)
+- Google Gemini 3.6 Flash (AI to extract JSON from photos; model name configurable via `GEMINI_MODEL`, default `gemini-3.6-flash` — older 1.5/2.x models are shut down by Google and return 404)
 - Vercel Blob (JSON file storage)
 - jose + JWT (signed admin session cookie, works in both Node and Edge/middleware runtimes)
 
@@ -32,6 +32,7 @@ Copy `.env.example` to `.env.local` and fill in the real values:
 | Variable | Description |
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API key (Google AI Studio) |
+| `GEMINI_MODEL` | Optional Google Gemini model (default: `gemini-3.6-flash`) |
 | `ADMIN_SESSION_SECRET` | Secret to sign admin session cookies (`openssl rand -base64 32`) |
 | `ADMIN_PASSWORD_HASH` | base64-encoded admin password |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob token (configured automatically on Vercel) |

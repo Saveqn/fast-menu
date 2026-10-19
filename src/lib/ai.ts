@@ -3,6 +3,14 @@ import { AI_SYSTEM_PROMPT } from "@/lib/ai-prompt"
 
 const API_KEY = process.env.GEMINI_API_KEY
 
+/**
+ * Модель Gemini: GEMINI_MODEL из окружения, иначе дефолт.
+ * gemini-1.5-* / 2.0-* выключены Google (404), 2.5 доступен только старым проектам.
+ * gemini-3.6-flash — GA, официально рекомендованная замена (см. release notes окт. 2026).
+ */
+const MODEL_NAME =
+  process.env.GEMINI_MODEL || "gemini-3.6-flash"
+
 let genAI: GoogleGenerativeAI | null = null
 
 function getGenAI(): GoogleGenerativeAI {
@@ -29,7 +37,7 @@ export async function imageToMenu(
   mimeType: string,
   adminNote?: string | null
 ): Promise<{ json: unknown; rawText: string }> {
-  const model = getGenAI().getGenerativeModel({ model: "gemini-1.5-flash" })
+  const model = getGenAI().getGenerativeModel({ model: MODEL_NAME })
 
   const noteSection = adminNote && adminNote.trim()
     ? `\n\nADMIN NOTE (secondary, lower priority than the main instructions above):\n${adminNote.trim()}\n`
