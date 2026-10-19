@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { requireAdminSession } from "@/lib/auth"
 import { validateMenu } from "@/lib/schema"
 
 export const runtime = "nodejs"
 
-export async function POST(req: NextRequest) {
-  const auth = requireAdminSession(req)
+export async function POST(req: Request) {
+  const auth = requireAdminSession(req.headers)
   if (auth) return auth
 
   try {
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
     const text = await file.text()
     const data = JSON.parse(text)
 
-    // Valida a estrutura sem guardar ainda (pré-visualização)
     const menu = validateMenu(data)
 
     return NextResponse.json({ ok: true, menu })

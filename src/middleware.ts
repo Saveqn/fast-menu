@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getAdminSession } from "@/lib/auth"
+import {
+  getTokenFromRequest,
+  validateSession,
+} from "@/lib/auth"
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -15,8 +18,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.next()
     }
 
-    const session = getAdminSession()
-    if (!session) {
+    const token = getTokenFromRequest(req.headers)
+    if (!token || !validateSession(token)) {
       const loginUrl = new URL("/admin/login", req.url)
       return NextResponse.redirect(loginUrl)
     }

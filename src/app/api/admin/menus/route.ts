@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { requireAdminSession } from "@/lib/auth"
 import { saveMenu, listMenus, deleteMenu } from "@/lib/storage"
 import { validateMenu } from "@/lib/schema"
 
 export async function GET() {
-  const auth = requireAdminSession(new NextRequest("http://localhost/"))
+  const auth = requireAdminSession(new Headers())
   if (auth) return auth
   const menus = await listMenus()
   return NextResponse.json(menus)
 }
 
-export async function POST(req: NextRequest) {
-  const auth = requireAdminSession(req)
+export async function POST(req: Request) {
+  const auth = requireAdminSession(req.headers)
   if (auth) return auth
 
   try {
@@ -20,12 +20,15 @@ export async function POST(req: NextRequest) {
     const weekStart = await saveMenu(menu, "manual")
     return NextResponse.json({ ok: true, weekStart })
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Menu inválido" }, { status: 400 })
+    return NextResponse.json(
+      { error: err?.message || "Menu inválido" },
+      { status: 400 }
+    )
   }
 }
 
-export async function DELETE(req: NextRequest) {
-  const auth = requireAdminSession(req)
+export async function DELETE(req: Request) {
+  const auth = requireAdminSession(req.headers)
   if (auth) return auth
 
   const { searchParams } = new URL(req.url)

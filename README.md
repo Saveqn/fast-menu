@@ -13,7 +13,7 @@ Site language: **European Portuguese (pt-PT)**.
 
 ### Administrator
 - Accesses `/admin` by typing the address manually (no link on the public site).
-- Logs in with a password stored as a **bcrypt hash** in the `ADMIN_PASSWORD_HASH` environment variable.
+- Logs in with a password stored as a **base64-encoded string** in the `ADMIN_PASSWORD_HASH` environment variable.
 - Can upload a photo of the menu board: AI (Google Gemini) generates a JSON, a preview is shown, and after confirmation it is applied for everyone.
 - Can also upload a `.json` file directly.
 
@@ -33,18 +33,18 @@ Copy `.env.example` to `.env.local` and fill in the real values:
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API key (Google AI Studio) |
 | `ADMIN_SESSION_SECRET` | Secret to sign admin session cookies (`openssl rand -base64 32`) |
-| `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password |
+| `ADMIN_PASSWORD_HASH` | base64-encoded admin password |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob token (configured automatically on Vercel) |
 
 **Never commit `.env.local` or real secret values to GitHub.** The hash must live only in Vercel Environment Variables and your local `.env.local` (gitignored).
 
-### Generating the admin password hash
+### Generating the admin password hash (base64)
 
 ```bash
 node scripts/hash-password.js "your-secret-password"
 ```
 
-Copy the printed hash into `ADMIN_PASSWORD_HASH`.
+Copy the printed `ADMIN_PASSWORD_HASH=...` value into the environment variable.
 
 ## Installation and development
 

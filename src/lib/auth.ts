@@ -1,13 +1,13 @@
-import { compare, hash } from "bcryptjs"
-import { sign, verify, type Secret, SignOptions, VerifyOptions } from "jsonwebtoken"
-import { cookies } from "next/headers"
-import { NextRequest, NextResponse } from "next/server"
+import { sign, verify, type Secret } from "jsonwebtoken"
+import { NextResponse } from "next/server"
 
-const SESSION_SECRET = (process.env.ADMIN_SESSION_SECRET as Secret) || "dev-secret-change-me"
+const SESSION_SECRET: Secret =
+  (process.env.ADMIN_SESSION_SECRET as Secret) || "dev-secret-change-me"
 const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH
 
 const COOKIE_NAME = "admin_session"
 const TOKEN_TTL_SECONDS = 60 * 60 * 8 // 8 horas
+const COOKIE_MAX_AGE = TOKEN_TTL_SECONDS
 
 export interface AdminSession {
   admin: boolean
@@ -16,31 +16,23 @@ export interface AdminSession {
 }
 
 /**
- * Compara a palavra-passe enviada com o hash armazenado na variável de ambiente.
- * Retorna true se corresponder.
+ * Compara a palavra-passe enviada com o valor armazenado em base64.
  */
-export async function verifyAdminPassword(password: string): Promise<boolean> {
+export function verifyAdminPassword(password: string): boolean {
   if (!ADMIN_PASSWORD_HASH) {
     return false
   }
-  try {
-    return await compare(password, ADMIN_PASSWORD_HASH)
-  } catch {
-    return false
-  }
+  const encoded = Buffer.from(password).toString("base64")
+  return encoded === ADMIN_PASSWORD_HASH
 }
 
 /**
- * Gera um hash bcrypt para uma palavra-passe em texto simples.
- * Útil para criar o valor inicial de ADMIN_PASSWORD_HASH.
+ * Кодирует пароль в base64 для сохранения в переменную окружения.
  */
-export async function makePasswordHash(password: string): Promise<string> {
-  return await hash(password, 10)
+export function makePasswordHash(password: string): string {
+  return Buffer.from(password).toString("base64")
 }
 
-/**
- * Assina um JWT de sessão do admin.
- */
 export function signAdminSession(): string {
   const now = Math.floor(Date.now() / 1000)
   const payload: AdminSession = {
@@ -48,67 +40,42 @@ export function signAdminSession(): string {
     iat: now,
     exp: now + TOKEN_TTL_SECONDS,
   }
-  return sign(payload, SESSION_SECRET, { expiresIn: TOKEN_TTL_SECONDS } as SignOptions)
+  return sign(payload, SESSION_SECRET)
 }
 
-/**
- * Lê o cookie de sessão e valida o JWT.
- */
-export function getAdminSession(): AdminSession | null {
+export function getTokenFromRequest(headers: Headers): string | null {
+  const cookie = headers.get("cookie")
+  if (!cookie) return null
+  const match = cookie.match(
+    new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`)
+  )
+  return match ? match[1] : null
+}
+
+export function validateSession(token: string): AdminSession | null {
   try {
-    const cookieStore = cookies()
-    const token = cookieStore.get(COOKIE_NAME)?.value
-    if (!token) return null
-    const decoded = verify(token, SESSION_SECRET, {
-      complete: false,
-    } as VerifyOptions) as AdminSession
-    return decoded
+    return verify(token, SESSION_SECRET) as AdminSession
   } catch {
     return null
   }
 }
 
-/**
- * Middleware de API: exige sessão de admin válida.
- * Retorna NextResponse com 401 se não houver sessão, ou null se estiver tudo bem.
- */
-export function requireAdminSession(req: NextRequest): NextResponse | null {
-  const session = getAdminSession()
-  if (!session) {
+export function requireAdminSession(
+  reqHeaders: Headers
+): NextResponse | null {
+  const token = getTokenFromRequest(reqHeaders)
+  if (!token || !validateSession(token)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
   return null
 }
 
-/**
- * Remove o cookie de sessão (logout).
- */
-export function clearAdminSession(response: NextResponse): NextResponse {
-  response.cookies.set({
-    name: COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    path: "/",
-    maxAge: 0,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  })
-  return response
+export function setSessionCookieHeader(): string {
+  const token = signAdminSession()
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
+  return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`
 }
 
-/**
- * Define o cookie de sessão (login).
- */
-export function setAdminSession(response: NextResponse): NextResponse {
-  const token = signAdminSession()
-  response.cookies.set({
-    name: COOKIE_NAME,
-    value: token,
-    httpOnly: true,
-    path: "/",
-    maxAge: TOKEN_TTL_SECONDS,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  })
-  return response
+export function clearSessionCookieHeader(): string {
+  return `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`
 }

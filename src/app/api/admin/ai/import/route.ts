@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { requireAdminSession } from "@/lib/auth"
 import { imageToMenu } from "@/lib/ai"
 import { validateMenu } from "@/lib/schema"
 
 export const runtime = "nodejs"
 
-export async function POST(req: NextRequest) {
-  const auth = requireAdminSession(req)
+export async function POST(req: Request) {
+  const auth = requireAdminSession(req.headers)
   if (auth) return auth
 
   try {
@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
 
     const { json, rawText } = await imageToMenu(base64, file.type, adminNote)
 
-    // Valida a estrutura antes de devolver ao frontend
     const menu = validateMenu(json)
 
     return NextResponse.json({
