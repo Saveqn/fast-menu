@@ -131,20 +131,52 @@ async function listBlobMenus(): Promise<StoredMenu[]> {
     try {
       const res = await fetch(b.url)
       const menu = (await res.json()) as StoredMenu
-      menus.push(menu)
+      if (menu?.weekStart) menus.push(menu)
     } catch {
       // ignora ficheiros corrompidos
     }
   }
-  return menus.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  // Только самая свежая копия каждой недели
+  return dedupeByWeek(menus).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+/**
+ * Mantém apenas a cópia mais recente de cada semana (maior updatedAt).
+ */
+function dedupeByWeek(menus: StoredMenu[]): StoredMenu[] {
+  const byWeek = new Map<string, StoredMenu>()
+  for (const m of menus) {
+    const existing = byWeek.get(m.weekStart)
+    if (!existing || m.updatedAt > existing.updatedAt) {
+      byWeek.set(m.weekStart, m)
+    }
+  }
+  return Array.from(byWeek.values())
 }
 
 async function getBlobMenuByWeek(weekStart: string): Promise<StoredMenu | null> {
+  // Точное имя файла может не существовать (старые копии с суффиксами) —
+  // берём самую свежую копию этой недели из последовательного списка.
   const { blobs } = await list({ prefix: `${MENUS_DIR}/` })
-  const match = blobs.find((b) => b.pathname === `${MENUS_DIR}/${weekStart}.json`)
-  if (!match) return null
+  const weekRe = new RegExp(`^${MENUS_DIR}/${weekStart}(?:\\.\\d+)?\\.json$`)
+  const matches = blobs
+    .filter((b) => weekRe.test(b.pathname))
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+  if (matches.length === 0) {
+    // fallback: ищем по содержимому (weekStart внутри JSON)
+    for (const b of blobs) {
+      try {
+        const res = await fetch(b.url)
+        const menu = (await res.json()) as StoredMenu
+        if (menu?.weekStart === weekStart) return menu
+      } catch {
+        // ignora ficheiros corrompidos
+      }
+    }
+    return null
+  }
   try {
-    const res = await fetch(match.url)
+    const res = await fetch(matches[0].url)
     return (await res.json()) as StoredMenu
   } catch {
     return null
@@ -155,10 +187,15 @@ async function saveBlobMenu(stored: StoredMenu): Promise<string> {
   const blob = await put(`${MENUS_DIR}/${stored.weekStart}.json`, JSON.stringify(stored, null, 2), {
     access: "public",
     contentType: "application/json",
+    addRandomSuffix: false, // перезаписываем файл недели вместо создания копий
   })
   return stored.weekStart
 }
 
 async function deleteBlobMenu(weekStart: string): Promise<void> {
-  await del(`${MENUS_DIR}/${weekStart}.json`)
+  // Удаляем ВСЕ варианты файлов этой недели (в т.ч. старые копии с суффиксами)
+  const { blobs } = await list({ prefix: `${MENUS_DIR}/` })
+  const weekRe = new RegExp(`^${MENUS_DIR}/${weekStart}(?:\\.\\d+)?\\.json$`)
+  const targets = blobs.filter((b) => weekRe.test(b.pathname))
+  await Promise.all(targets.map((b) => del(b.url, {})))
 }

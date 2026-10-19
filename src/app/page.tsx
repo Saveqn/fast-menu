@@ -3,6 +3,9 @@ import { OutdatedNotice } from "@/components/OutdatedNotice"
 import { HistoryList } from "@/components/HistoryList"
 import { listMenus } from "@/lib/storage"
 
+// Страница читает хранилище (Blob/fs) на каждый запрос — рендерим динамически.
+export const dynamic = "force-dynamic"
+
 export default async function HomePage() {
   const menus = await listMenus()
 

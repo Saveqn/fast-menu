@@ -2,6 +2,8 @@ import { HistoryList } from "@/components/HistoryList"
 import { listMenus } from "@/lib/storage"
 import { MenuWeek } from "@/components/MenuWeek"
 
+export const dynamic = "force-dynamic"
+
 export default async function HistoricoPage() {
   const menus = await listMenus()
   const latest = menus[0]

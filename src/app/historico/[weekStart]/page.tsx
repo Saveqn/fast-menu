@@ -2,6 +2,8 @@ import { notFound } from "next/navigation"
 import { MenuWeek } from "@/components/MenuWeek"
 import { getMenuByWeek } from "@/lib/storage"
 
+export const dynamic = "force-dynamic"
+
 export default async function HistoricoWeekPage({
   params,
 }: {

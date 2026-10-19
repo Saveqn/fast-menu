@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { listMenus, getMenuByWeek } from "@/lib/storage"
 import { getMonday, getFriday, isDateInWeek } from "@/lib/menus"
 
+// Данные из хранилища на каждый запрос — не кэшировать.
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   const menus = await listMenus()
 
