@@ -2,28 +2,70 @@
 
 import { useState } from "react"
 import { AI_SYSTEM_PROMPT } from "@/lib/ai-prompt"
+import {
+  compressImageToLimit,
+  formatBytes,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/image"
 
 export function AiImport({
   onGenerate,
   onUploadJson,
 }: {
-  onGenerate: (file: File, adminNote: string) => Promise<void>
+  onGenerate: (file: File | Blob, adminNote: string) => Promise<void>
   onUploadJson: (file: File) => Promise<void>
 }) {
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageBlob, setImageBlob] = useState<File | Blob | null>(null)
+  const [imageSizeNote, setImageSizeNote] = useState("")
+  const [preparing, setPreparing] = useState(false)
   const [adminNote, setAdminNote] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setError("")
+    setImageFile(f)
+    setImageBlob(null)
+    setImageSizeNote("")
+    if (f.size > MAX_UPLOAD_BYTES) {
+      setPreparing(true)
+      try {
+        const { blob, compressed, bytes } = await compressImageToLimit(f)
+        setImageBlob(blob)
+        setImageSizeNote(
+          compressed
+            ? `Foto otimizada para envio: ${formatBytes(f.size)} → ${formatBytes(bytes)}.`
+            : `Foto: ${formatBytes(bytes)}.`
+        )
+      } catch (err: any) {
+        setError(err?.message || "Não foi possível processar a imagem.")
+      } finally {
+        setPreparing(false)
+      }
+    } else {
+      setImageSizeNote(`Foto: ${formatBytes(f.size)}.`)
+    }
+  }
 
   async function handleGenerate() {
     if (!imageFile) {
       setError("Selecione primeiro uma foto do ementário.")
       return
     }
+    if (imageFile.size > MAX_UPLOAD_BYTES && !imageBlob) {
+      setError(
+        "A foto ainda está a ser otimizada. Aguarde um momento e tente novamente."
+      )
+      return
+    }
     setError("")
     setLoading(true)
     try {
-      await onGenerate(imageFile, adminNote)
+      const file: File | Blob = imageFile.size > MAX_UPLOAD_BYTES ? imageBlob! : imageFile
+      await onGenerate(file, adminNote)
     } catch (err: any) {
       setError(err?.message || "Erro ao gerar JSON com a IA.")
     } finally {
@@ -63,6 +105,8 @@ export function AiImport({
                   type="button"
                   onClick={() => {
                     setImageFile(null)
+                    setImageBlob(null)
+                    setImageSizeNote("")
                     const el = document.getElementById(
                       "photo-input"
                     ) as HTMLInputElement | null
@@ -72,6 +116,13 @@ export function AiImport({
                 >
                   ×
                 </button>
+                {imageSizeNote && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {preparing
+                      ? "A otimizar imagem para envio..."
+                      : imageSizeNote}
+                  </p>
+                )}
               </div>
             ) : (
               <>
@@ -81,10 +132,7 @@ export function AiImport({
                   type="file"
                   accept="image/*"
                   className="sr-only"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) setImageFile(f)
-                  }}
+                  onChange={handlePhotoChange}
                 />
                 <label
                   htmlFor="photo-input"

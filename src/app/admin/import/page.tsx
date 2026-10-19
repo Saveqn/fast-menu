@@ -9,12 +9,12 @@ export default function AdminImportPage() {
   const [preview, setPreview] = useState<SchoolMenu | null>(null)
   const [step, setStep] = useState<"import" | "preview">("import")
 
-  async function handleGenerate(file: File, adminNote: string) {
+  async function handleGenerate(file: File | Blob, adminNote: string) {
     const res = await fetch("/api/admin/ai/import", {
       method: "POST",
       body: (() => {
         const fd = new FormData()
-        fd.append("image", file)
+        fd.append("image", file, "ementario.jpg")
         if (adminNote) fd.append("adminNote", adminNote)
         return fd
       })(),

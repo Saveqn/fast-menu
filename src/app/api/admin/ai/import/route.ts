@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireAdminSession } from "@/lib/auth"
 import { imageToMenu } from "@/lib/ai"
 import { validateMenu } from "@/lib/schema"
+import { MAX_UPLOAD_BYTES } from "@/lib/image"
 
 export const runtime = "nodejs"
 
@@ -16,6 +17,19 @@ export async function POST(req: Request) {
 
     if (!file) {
       return NextResponse.json({ error: "Imagem necessária" }, { status: 400 })
+    }
+
+    // Защита от запросов мимо клиента: Vercel Functions ограничивают
+    // body запроса в 4.5 MB (413). Клиент сжимает фото, но endpoint
+    // тоже валидирует размер напрямую.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        {
+          error:
+            "A imagem é demasiado grande (máx. 4.5 MB). Reduza a resolução da foto e tente novamente.",
+        },
+        { status: 413 }
+      )
     }
 
     const arrayBuffer = await file.arrayBuffer()
