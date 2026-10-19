@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import { AI_SYSTEM_PROMPT } from "@/lib/ai-prompt"
 
 const API_KEY = process.env.GEMINI_API_KEY
 
@@ -14,39 +15,9 @@ function getGenAI(): GoogleGenerativeAI {
   return genAI
 }
 
-// PROMPT PRINCIPAL — em inglês, fixo, não editável pelo admin.
+// PROMPT PRINCIPAL fica em src/lib/ai-prompt.ts (fonte única).
 // O admin só pode adicionar um pequeno note de administrador que é anexado
 // ao final, com aviso de que o prompt principal tem prioridade.
-export const AI_SYSTEM_PROMPT_EN = `
-You are an assistant that extracts school canteen menus from photos.
-Return ONLY valid JSON, no markdown, no extra text before or after.
-
-Required JSON structure:
-{
-  "weekStart": "YYYY-MM-DD",
-  "weekEnd": "YYYY-MM-DD",
-  "days": [
-    {
-      "date": "YYYY-MM-DD",
-      "weekday": "monday | tuesday | wednesday | thursday | friday",
-      "sopa": "string or null",
-      "prato": "string or null",
-      "vegetariano": "string or null",
-      "sobremesa": "string or null",
-      "pao": true | false,
-      "closed": true | false,
-      "reason": "holiday | vacation | null"
-    }
-  ]
-}
-
-Rules:
-- Include only weekdays (Monday to Friday).
-- If a day is closed (holiday / vacation): closed: true, food fields may be null.
-- pao: true if bread is mentioned, false if not mentioned.
-- If unsure about a field, use null.
-- Do not include markdown code fences. Do not explain. Return ONLY raw JSON.
-`
 
 /**
  * Envia uma imagem (base64 ou buffer) + prompt fixo para o Gemini e devolve o JSON extraído.
@@ -64,7 +35,7 @@ export async function imageToMenu(
     ? `\n\nADMIN NOTE (secondary, lower priority than the main instructions above):\n${adminNote.trim()}\n`
     : ""
 
-  const fullPrompt = AI_SYSTEM_PROMPT_EN + noteSection
+  const fullPrompt = AI_SYSTEM_PROMPT + noteSection
 
   const result = await model.generateContent([
     fullPrompt,

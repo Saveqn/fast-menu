@@ -1,36 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { SchoolMenu } from "@/types/menu"
-
-const AI_PROMPT_TEXT = `You are an assistant that extracts school canteen menus from photos.
-Return ONLY valid JSON, no markdown, no extra text before or after.
-
-Required JSON structure:
-{
-  "weekStart": "YYYY-MM-DD",
-  "weekEnd": "YYYY-MM-DD",
-  "days": [
-    {
-      "date": "YYYY-MM-DD",
-      "weekday": "monday | tuesday | wednesday | thursday | friday",
-      "sopa": "string or null",
-      "prato": "string or null",
-      "vegetariano": "string or null",
-      "sobremesa": "string or null",
-      "pao": true | false,
-      "closed": true | false,
-      "reason": "holiday | vacation | null"
-    }
-  ]
-}
-
-Rules:
-- Include only weekdays (Monday to Friday).
-- If a day is closed (holiday / vacation): closed: true, food fields may be null.
-- pao: true if bread is mentioned, false if not mentioned.
-- If unsure about a field, use null.
-- Do not include markdown code fences. Do not explain. Return ONLY raw JSON.`
+import { AI_SYSTEM_PROMPT } from "@/lib/ai-prompt"
 
 export function AiImport({
   onGenerate,
@@ -41,8 +12,6 @@ export function AiImport({
 }) {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [adminNote, setAdminNote] = useState("")
-  const [preview, setPreview] = useState<SchoolMenu | null>(null)
-  const [rawText, setRawText] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -92,7 +61,13 @@ export function AiImport({
                 />
                 <button
                   type="button"
-                  onClick={() => setImageFile(null)}
+                  onClick={() => {
+                    setImageFile(null)
+                    const el = document.getElementById(
+                      "photo-input"
+                    ) as HTMLInputElement | null
+                    if (el) el.value = ""
+                  }}
                   className="absolute -top-3 -right-3 bg-destructive text-white rounded-full p-1 hover:bg-destructive/90"
                 >
                   ×
@@ -102,6 +77,7 @@ export function AiImport({
               <>
                 <p className="text-muted-foreground">Clique para escolher uma foto</p>
                 <input
+                  id="photo-input"
                   type="file"
                   accept="image/*"
                   className="sr-only"
@@ -110,7 +86,10 @@ export function AiImport({
                     if (f) setImageFile(f)
                   }}
                 />
-                <label className="inline-block mt-2 rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer">
+                <label
+                  htmlFor="photo-input"
+                  className="inline-block mt-2 rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+                >
                   Escolher foto
                 </label>
               </>
@@ -124,7 +103,7 @@ export function AiImport({
             O prompt abaixo está em inglês e é fixo — o admin não o pode alterar.
           </p>
           <div className="border rounded-lg p-3 font-mono text-xs text-muted-foreground overflow-x-auto bg-background/50 max-h-96 overflow-y-auto">
-            {AI_PROMPT_TEXT.split("\n").map((line, i) => (
+            {AI_SYSTEM_PROMPT.split("\n").map((line, i) => (
               <div key={i} className="whitespace-pre break-all">
                 {line}
               </div>
