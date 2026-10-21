@@ -15,8 +15,7 @@ export default async function HistoricoWeekPage({
   }
 
   return (
-    <main className="min-h-screen px-4">
-      <h1 className="text-2xl font-bold mb-6">Ementa — {params.weekStart}</h1>
+    <main className="min-h-screen bg-[#faf9f6] py-8 sm:py-12">
       <MenuWeek menu={menu} />
     </main>
   )

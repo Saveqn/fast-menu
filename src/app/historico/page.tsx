@@ -9,15 +9,19 @@ export default async function HistoricoPage() {
   const latest = menus[0]
 
   return (
-    <main className="min-h-screen px-4">
-      <h1 className="text-2xl font-bold mb-6">Arquivo de Ementas</h1>
+    <main className="min-h-screen bg-[#faf9f6] py-8 sm:py-12">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
+        <h1 className="mb-6 text-3xl font-bold tracking-tight text-stone-950 sm:text-4xl">Arquivo de ementas</h1>
+      </div>
       {latest ? (
         <>
           <MenuWeek menu={latest} />
-          <HistoryList menus={menus} />
+          <div className="mx-auto mt-12 max-w-[1500px] border-t border-stone-200 pt-8 sm:mt-16 sm:pt-10">
+            <HistoryList menus={menus} />
+          </div>
         </>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="py-12 text-center text-stone-500">
           Nenhuma ementa disponível.
         </div>
       )}

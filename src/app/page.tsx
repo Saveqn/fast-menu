@@ -10,8 +10,14 @@ export default async function HomePage() {
   const menus = await listMenus()
 
   const today = new Date()
-  const weekStart = new Date(today)
-  weekStart.setUTCHours(0, 0, 0, 0)
+  const lisbonDateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(today)
+  const currentDate = `${lisbonDateParts.find((part) => part.type === "year")?.value}-${lisbonDateParts.find((part) => part.type === "month")?.value}-${lisbonDateParts.find((part) => part.type === "day")?.value}`
+  const weekStart = new Date(`${currentDate}T12:00:00Z`)
   const day = weekStart.getUTCDay()
   const mondayOffset = day === 0 ? -6 : 1 - day
   weekStart.setUTCDate(weekStart.getUTCDate() + mondayOffset)
@@ -22,18 +28,20 @@ export default async function HomePage() {
   const menu = current || menus[0] || null
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#faf9f6] py-8 sm:py-12">
       {menu ? (
         <>
-          {outdated && <OutdatedNotice />}
-          <MenuWeek menu={menu} />
-          <HistoryList menus={menus} />
+          {outdated && <div className="mx-auto mb-6 max-w-[1500px] px-4 sm:px-6 lg:px-8"><OutdatedNotice /></div>}
+          <MenuWeek menu={menu} currentDate={current ? currentDate : undefined} />
+          <div className="mx-auto mt-12 max-w-[1500px] border-t border-stone-200 pt-8 sm:mt-16 sm:pt-10">
+            <HistoryList menus={menus} />
+          </div>
         </>
       ) : (
-        <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="flex min-h-[60vh] items-center justify-center px-4">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Ementário Escolar</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="text-3xl font-bold tracking-tight text-stone-950">Ementário escolar</h1>
+            <p className="mt-2 text-stone-600">
               Ainda não há ementas disponíveis. Volte em breve.
             </p>
           </div>
